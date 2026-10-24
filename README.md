@@ -3,7 +3,7 @@
 A scalable Ashita v4 overlay for creating your own timers and notes, with
 adjustable background color, opacity/transparency, border, text size, and
 text color -- plus a built-in **World Info** tracker that shows the active
-Regional Specialty Event (RSE) pop, your race's upcoming RSE schedule, a
+Race Specific Equipment (RSE) event, your race's upcoming RSE schedule, a
 forward-looking day/elemental-weakness calendar, and moon phase.
 
 World Info is computed entirely locally, from the real-world clock. It does
