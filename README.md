@@ -10,9 +10,6 @@ World Info is computed entirely locally, from the real-world clock. It does
 **not** contact phoenix-xi.com, any wiki, or any other server at runtime --
 see [Credits](#credits) below.
 
-(Formerly "timernotes" -- renamed to VanaLog now that it covers more than
-just timers and notes.)
-
 ## Installation
 
 1. Copy the `vanalog` folder into your Ashita `addons` folder, so you end
