@@ -3,15 +3,12 @@
 A scalable Ashita v4 overlay for creating your own timers and notes, with
 adjustable background color, opacity/transparency, border, text size, and
 text color -- plus a built-in **World Info** tracker that shows the active
-Regional Specialty Event (RSE) pop, your race's upcoming RSE schedule, a
-forward-looking day/elemental-weakness calendar, and moon phase.
+Race Specific Equipment (RSE) event, your race's upcoming RSE schedule, a
+forward-looking day/weekly calendar, and moon phase.
 
 World Info is computed entirely locally, from the real-world clock. It does
 **not** contact phoenix-xi.com, any wiki, or any other server at runtime --
 see [Credits](#credits) below.
-
-(Formerly "timernotes" -- renamed to VanaLog now that it covers more than
-just timers and notes.)
 
 ## Screenshots
 
@@ -96,7 +93,7 @@ lock/unlock, open settings, clear all).
 - The overlay window itself is a normal draggable/resizable window when
   unlocked -- drag the title bar to move it, drag a corner/edge to resize it.
 - The overlay has four tabs -- **Timers**, **Notes**, **World** (a compact
-  view of active RSE, your race's next few pops, upcoming weak elements, and
+  view of active RSE, your race's next few pops, upcoming elemental day of the week, and
   moon phase), and **Reminders** (a live countdown for whichever reminders
   you've turned on) -- so you can flip between them without opening the full
   settings window. World and Reminders are hidden if World Info is disabled.
@@ -123,7 +120,7 @@ A pure display tab -- each section below is its own collapsible header, so
 you can fold away what you don't care about. Alert/reminder setup lives in
 the separate **Reminders** tab, not here.
 
-- **Vana'diel Clock** -- current date/time and the weak element for today.
+- **Vana'diel Clock** -- current date/time and elemental day of the week.
 - **Moon Phase** -- current phase and percent, a countdown to the next New
   Moon and next Full Moon (or "active, ends in..." if one is in progress),
   and a forward calendar of upcoming New/Full Moon windows. Moon phase
@@ -138,8 +135,7 @@ the separate **Reminders** tab, not here.
   character by default, with a manual override if you'd rather track a
   different race (e.g. an alt, or a friend's).
 - **Day Calendar** -- a forward-looking list of upcoming Vana'diel days, each
-  with its weak element and moon phase, so you can plan elemental strategies
-  ahead of time.
+  elemental day and moon phase, so you can plan accordingly.
 - Lists default to 8 lines (4 cycles for the moon calendar) and can be
   expanded (sliders, 3-40 / 1-12).
 
