@@ -13,6 +13,38 @@ see [Credits](#credits) below.
 (Formerly "timernotes" -- renamed to VanaLog now that it covers more than
 just timers and notes.)
 
+## Screenshots
+
+**Settings window**
+
+<table>
+<tr>
+<td><img src="screenshots/settings-appearance.png" width="420" alt="Appearance tab"><br><sub>Appearance -- theme presets, colors, alerts</sub></td>
+<td><img src="screenshots/settings-timers-notes.png" width="420" alt="Timers & Notes tab"><br><sub>Timers & Notes -- add/edit entries</sub></td>
+</tr>
+<tr>
+<td><img src="screenshots/settings-world-info.webp" width="420" alt="World Info tab"><br><sub>World Info -- clock, moon phase, RSE, day calendar</sub></td>
+<td><img src="screenshots/settings-reminders.webp" width="420" alt="Reminders tab"><br><sub>Reminders -- RSE, Day Change, Moon Phase alerts</sub></td>
+</tr>
+<tr>
+<td><img src="screenshots/settings-about.png" width="420" alt="About tab"><br><sub>About -- credits</sub></td>
+<td></td>
+</tr>
+</table>
+
+**Overlay**
+
+<table>
+<tr>
+<td><img src="screenshots/overlay-timers.png" width="300" alt="Overlay Timers tab"><br><sub>Timers</sub></td>
+<td><img src="screenshots/overlay-notes.png" width="300" alt="Overlay Notes tab"><br><sub>Notes</sub></td>
+</tr>
+<tr>
+<td><img src="screenshots/overlay-world.png" width="300" alt="Overlay World tab"><br><sub>World</sub></td>
+<td><img src="screenshots/overlay-reminders.png" width="300" alt="Overlay Reminders tab"><br><sub>Reminders</sub></td>
+</tr>
+</table>
+
 ## Installation
 
 1. Copy the `vanalog` folder into your Ashita `addons` folder, so you end
