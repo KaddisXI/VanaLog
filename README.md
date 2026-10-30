@@ -1,11 +1,15 @@
 # VanaLog
 
-A scalable Ashita v4 overlay for your own timers and notes -- fully
-customizable colors, opacity, and text -- plus a built-in **World Info**
-tracker (RSE, the day/moon calendar, crafting guild hours, airship/ferry
-schedules), a **Reminders** system (including daily Guild Point and Fishing
-goal tracking), and a **Journal** that keeps a dated log of what you've
-worked on.
+Never miss what matters in Vana'diel. VanaLog automatically tracks **RSE**
+windows, **airship and ferry** departures, **crafting guild** shop hours, the
+day/moon calendar, and your own custom timers and notes -- then fires custom
+**alerts** to keep you notified of exactly the events you care about, down to
+daily Guild Point and Fishing goal reminders. A built-in **Journal** keeps a
+dated log of what you've worked on along the way.
+
+On top of that, VanaLog is a clean, fully customizable overlay -- scalable,
+with your choice of colors, opacity, text, and theme presets, so it fits
+right into your UI instead of looking bolted on.
 
 World Info is computed entirely locally, from the real-world clock. It does
 **not** contact phoenix-xi.com, any wiki, or any other server at runtime --
