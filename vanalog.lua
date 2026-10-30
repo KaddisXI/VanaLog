@@ -9,7 +9,7 @@
 
 addon.name      = 'vanalog';
 addon.author    = 'Kaddis';
-addon.version   = '2.4';
+addon.version   = '2.5';
 addon.desc      = 'A scalable overlay for user-created timers and notes, with a Vana\'diel RSE/day/moon tracker.';
 addon.link      = 'https://ashitaxi.com/';
 
@@ -106,6 +106,18 @@ local REMINDER_MESSAGES = {
     full_moon_active = function (e)
         return ('Full Moon is active! Fish bite rate: ~7s. (%s left)'):fmt(vanadiel.format_countdown(e.seconds));
     end,
+    guild_points_approach = function (e)
+        return ('Daily Guild Point turn-in for %s resets in %s.'):fmt(e.extra.guild_name, vanadiel.format_countdown(e.seconds));
+    end,
+    guild_points_active = function (e)
+        return ('Daily Guild Point turn-in for %s is open! (%s left today)'):fmt(e.extra.guild_name, vanadiel.format_countdown(e.seconds));
+    end,
+    fishing_approach = function (e)
+        return ('Daily Fishing goal resets in %s.'):fmt(vanadiel.format_countdown(e.seconds));
+    end,
+    fishing_active = function (e)
+        return ('Daily Fishing goal (200 catches) is active! (%s left today)'):fmt(vanadiel.format_countdown(e.seconds));
+    end,
 };
 
 --[[
@@ -131,6 +143,25 @@ local function print_reminder_alerts()
 end
 
 --[[
+* Prints any Notes whose "remind me" countdown just elapsed, and plays that note's chosen sound
+* locally (if any) -- never sent to party chat or anyone else.
+--]]
+local function print_note_reminders()
+    local ok, fired = pcall(timers.check_note_reminders);
+    if (not ok) then
+        return;
+    end
+
+    for x = 1, #fired do
+        local entry = fired[x];
+        print(chat.header(addon.name):append(chat.success('Reminder: ')):append(chat.message(entry.name)));
+        if (entry.sound ~= nil and entry.sound ~= '') then
+            pcall(sound.play, entry.sound, timers.settings.style.sound_volume[1]);
+        end
+    end
+end
+
+--[[
 * event: load
 --]]
 ashita.events.register('load', 'load_cb', function ()
@@ -150,7 +181,9 @@ end);
 ashita.events.register('d3d_present', 'present_cb', function ()
     overlay.render();
     settings_window.render();
+    pcall(world.sync_linked_notes, timers.settings);
     print_reminder_alerts();
+    print_note_reminders();
 end);
 
 --[[

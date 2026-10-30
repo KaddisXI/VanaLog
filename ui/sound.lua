@@ -23,7 +23,6 @@ sound.FOLDER = AshitaCore:GetInstallPath() .. '\\config\\addons\\' .. addon.name
 
 local loaded, winmm;
 local alias = 'vanalog_alert';
-local opened = nil;
 
 pcall(ffi.cdef, 'unsigned long __stdcall mciSendStringA(const char *command, char *answer, unsigned int size, void *window);');
 
@@ -80,7 +79,6 @@ function sound.play(name, volume)
     if (not mci(('open "%s" type mpegvideo alias %s'):format(path, alias))) then
         return false;
     end
-    opened = name;
 
     volume = math.floor(math.max(0, math.min(100, tonumber(volume) or 100)) * 10 + 0.5);
     mci(('setaudio %s volume to %d'):format(alias, volume));

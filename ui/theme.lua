@@ -118,6 +118,11 @@ end
 -- The settings-window ImGui colors this theme controls, and the role each pulls from.
 local WINDOW_COLOR_MAP = T{
     { role = 'background', paints = ImGuiCol_WindowBg },
+    -- Same role as WindowBg, not 'card': without this, every BeginChild region (the Timers &
+    -- Notes and Appearance tabs' panes) falls back to ImGui's own default ChildBg instead of the
+    -- preset, showing as a flat grey box instead of blending into the rest of the window the
+    -- way the tabs that don't use a child (Journal, World Info, Reminders, About) already do.
+    { role = 'background', paints = ImGuiCol_ChildBg },
     { role = 'card',       paints = ImGuiCol_TitleBgActive, also = ImGuiCol_PopupBg },
     { role = 'card',       paints = ImGuiCol_TitleBg },
     { role = 'border',     paints = ImGuiCol_Border },
@@ -125,7 +130,12 @@ local WINDOW_COLOR_MAP = T{
     { role = 'text',       paints = ImGuiCol_Text },
     { role = 'control',    paints = ImGuiCol_FrameBg },
     { role = 'hover',      paints = ImGuiCol_FrameBgHovered },
-    { role = 'accent',     paints = ImGuiCol_FrameBgActive },
+    -- Not 'accent': ImGuiCol_FrameBgActive is the *track* background behind a slider while
+    -- it's being dragged (also an input box while typing, etc.) -- using the loud accent color
+    -- here fills the whole track solid, drowning out the grab knob (itself accent-colored) so
+    -- dragging looks like one solid bar instead of a knob sliding along a track. 'hover' keeps
+    -- the track subtle while dragging, same as while merely hovered, so only the knob stands out.
+    { role = 'hover',      paints = ImGuiCol_FrameBgActive },
     { role = 'control',    paints = ImGuiCol_Button },
     { role = 'hover',      paints = ImGuiCol_ButtonHovered },
     { role = 'accent',     paints = ImGuiCol_ButtonActive },

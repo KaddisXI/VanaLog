@@ -6,6 +6,7 @@
 require 'common';
 
 local vanadiel = require 'core.vanadiel';
+local timers   = require 'core.timers';
 
 local world = T{ };
 
@@ -71,13 +72,36 @@ function world.overview(world_settings)
         vana_time     = vanadiel.now(),
         moon          = vanadiel.moon_phase(),
         moon_events   = vanadiel.next_moon_events(),
-        moon_calendar = vanadiel.moon_calendar(math.max(1, world_settings.moon_lines[1])),
         race_index    = race_index,
         race_detected = world.detect_race() ~= nil,
         active_rse    = vanadiel.rse_active(),
         race_schedule = vanadiel.rse_schedule_for_race(race_index, math.max(1, world_settings.rse_lines[1])),
         day_schedule  = vanadiel.day_schedule(math.max(1, world_settings.day_lines[1])),
+        guilds        = vanadiel.guild_schedule(),
+        airships      = vanadiel.airship_schedule(),
+        ferries       = vanadiel.ferry_schedule(math.max(1, world_settings.ferry_lines[1])),
     };
+end
+
+--[[
+* Returns the { starts, ends } window for the daily real-world 15:00 UTC reset (8am PT / 11am ET
+* / 12am JPT -- a fixed UTC instant; the US clock times shift with daylight saving, Japan's
+* doesn't, so only the UTC hour is actually authoritative here) that `now` currently falls
+* within -- shared by every reminder tied to that reset (Guild Points, Fishing).
+*
+* Two candidates, same "pick whichever hasn't ended yet" pattern as RSE below: yesterday's cycle
+* (still the active one if UTC's calendar date has rolled over but today's own 15:00 reset
+* hasn't happened yet) and today's. Seeding this from "today's calendar date" alone, without
+* this check, would flip a day early right at UTC midnight instead of at the actual 15:00 reset
+* -- which would misfire these reminders' linked notes' daily creation (see
+* world.sync_linked_notes()).
+--]]
+local function daily_utc_cycle(now)
+    local today = os.date('!*t', now);
+    local reset_today = vanadiel.timegm({ year = today.year, month = today.month, day = today.day, hour = 15, min = 0, sec = 0, isdst = false });
+
+    local prev_cycle = { starts = reset_today - 86400, ends = reset_today };
+    return (prev_cycle.ends > now) and prev_cycle or { starts = reset_today, ends = reset_today + 86400 };
 end
 
 --[[
@@ -90,10 +114,8 @@ local function next_occurrence(category, settings)
         -- cycle", which has usually already ended by the time you ask (each race only owns 1/8
         -- of that cycle) -- row 2 (one full cycle later) is always guaranteed to still be ahead
         -- of now, so pick whichever of the two hasn't ended yet.
-        local ok, rows = pcall(function ()
-            local race_index = world.effective_race_index(settings.world);
-            return vanadiel.rse_schedule_for_race(race_index, 2);
-        end);
+        local race_index = world.effective_race_index(settings.world);
+        local ok, rows = pcall(vanadiel.rse_schedule_for_race, race_index, 2);
         if (not ok or rows == nil) then
             return nil;
         end
@@ -102,7 +124,7 @@ local function next_occurrence(category, settings)
         if (row == nil) then
             return nil;
         end
-        return T{ starts = row.starts, ends = row.ends, extra = T{ location = row.location } };
+        return T{ starts = row.starts, ends = row.ends, extra = T{ location = row.location, race_name = vanadiel.RSE_RACES[race_index + 1] } };
     end
 
     if (category == 'day') then
@@ -125,22 +147,87 @@ local function next_occurrence(category, settings)
         return nil; -- no day is selected
     end
 
-    local ok, moon_events = pcall(vanadiel.next_moon_events);
-    if (not ok) then
+    if (category == 'new_moon' or category == 'full_moon') then
+        local ok, moon_events = pcall(vanadiel.next_moon_events);
+        if (not ok) then
+            return nil;
+        end
+        if (category == 'new_moon' and moon_events.next_new_starts ~= nil) then
+            return T{ starts = moon_events.next_new_starts, ends = moon_events.next_new_ends, extra = T{ } };
+        end
+        if (category == 'full_moon' and moon_events.next_full_starts ~= nil) then
+            return T{ starts = moon_events.next_full_starts, ends = moon_events.next_full_ends, extra = T{ } };
+        end
         return nil;
     end
-    if (category == 'new_moon' and moon_events.next_new_starts ~= nil) then
-        return T{ starts = moon_events.next_new_starts, ends = moon_events.next_new_ends, extra = T{ } };
+
+    if (category == 'guild_points') then
+        local cycle = daily_utc_cycle(os.time());
+
+        local cfg = settings.reminders.guild_points;
+        local guild_name = cfg.guild[1];
+        for x = 1, #vanadiel.GUILDS do
+            if (vanadiel.GUILDS[x].key == cfg.guild[1]) then
+                guild_name = vanadiel.GUILDS[x].name;
+                break;
+            end
+        end
+
+        return T{ starts = cycle.starts, ends = cycle.ends, extra = T{ guild_name = guild_name } };
     end
-    if (category == 'full_moon' and moon_events.next_full_starts ~= nil) then
-        return T{ starts = moon_events.next_full_starts, ends = moon_events.next_full_ends, extra = T{ } };
+
+    if (category == 'fishing') then
+        local cycle = daily_utc_cycle(os.time());
+        return T{ starts = cycle.starts, ends = cycle.ends, extra = T{ } };
     end
 
     return nil;
 end
 
-local REMINDER_CATEGORIES = T{ 'rse', 'day', 'new_moon', 'full_moon' };
-local REMINDER_LABELS = T{ rse = 'RSE', day = 'Day Change', new_moon = 'New Moon', full_moon = 'Full Moon' };
+-- Reminder categories that auto-create their own linked Note each cycle (see
+-- world.sync_linked_notes()), and how to name that cycle's note.
+local LINKED_NOTE_CATEGORIES = T{
+    { category = 'guild_points', build_name = function (extra) return ('%s GP Item Turn-In'):fmt(extra.guild_name); end },
+    { category = 'fishing',      build_name = function () return 'Daily: Fishing 200 catches'; end },
+};
+
+--[[
+* Keeps every linked-note reminder's auto-created Note in sync with its current cycle: creates a
+* fresh one the moment a new cycle begins (clearing any stale completed-state from the previous
+* cycle), and otherwise leaves it alone -- including after it's been completed or manually
+* deleted, since either way there's nothing to recreate until the *next* cycle starts. Call once
+* per frame alongside check_alerts().
+*
+* @param {table} settings - The addon's whole settings table.
+--]]
+function world.sync_linked_notes(settings)
+    if (not settings.world.enabled[1]) then
+        return;
+    end
+
+    for x = 1, #LINKED_NOTE_CATEGORIES do
+        local entry = LINKED_NOTE_CATEGORIES[x];
+        local cfg = settings.reminders[entry.category];
+
+        if (cfg.enabled[1]) then
+            local occurrence = next_occurrence(entry.category, settings);
+            if (occurrence ~= nil and occurrence.starts ~= cfg.cycle_starts[1]) then
+                cfg.cycle_starts[1] = occurrence.starts;
+                cfg.completed_for[1] = 0;
+                timers.add_timer(T{
+                    name            = entry.build_name(occurrence.extra),
+                    mode            = 'note',
+                    category        = 'daily',
+                    linked_reminder = entry.category,
+                    linked_cycle    = occurrence.starts,
+                });
+            end
+        end
+    end
+end
+
+local REMINDER_CATEGORIES = T{ 'rse', 'day', 'new_moon', 'full_moon', 'guild_points', 'fishing' };
+local REMINDER_LABELS = T{ rse = 'RSE', day = 'Day Change', new_moon = 'New Moon', full_moon = 'Full Moon', guild_points = 'Guild Points', fishing = 'Fishing' };
 
 -- Tracks which occurrence (by its start timestamp) has already triggered each kind of alert,
 -- per category, so check_alerts() fires once per real occurrence rather than once per frame
@@ -226,13 +313,20 @@ function world.reminder_status(settings)
         if (settings.reminders[category].enabled[1]) then
             local occurrence = next_occurrence(category, settings);
             if (occurrence ~= nil) then
+                -- Linked-note reminders (Guild Points, Fishing): once this cycle's auto-created
+                -- note has been marked Completed, show that instead of "Active now" for the
+                -- rest of the cycle.
+                local cfg = settings.reminders[category];
+                local completed = (cfg.completed_for ~= nil) and (cfg.completed_for[1] == occurrence.starts);
+
                 status:insert(#status + 1, T{
-                    category = category,
-                    label    = REMINDER_LABELS[category],
-                    active   = (occurrence.starts <= now),
-                    starts   = occurrence.starts,
-                    ends     = occurrence.ends,
-                    extra    = occurrence.extra,
+                    category  = category,
+                    label     = REMINDER_LABELS[category],
+                    active    = (occurrence.starts <= now),
+                    completed = completed,
+                    starts    = occurrence.starts,
+                    ends      = occurrence.ends,
+                    extra     = occurrence.extra,
                 });
             end
         end

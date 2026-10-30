@@ -55,6 +55,48 @@ vanadiel.RSE_DETAILS = T{
     },
 };
 
+-- Crafting guilds: open/close hour (Vana'diel, 24h) and holiday weekday (index into VANA_DAYS,
+-- 0-7) straight from timer4.js's getGuildHours()/guildHelper(). zone/coords/npc are the guild
+-- shop NPC's classic-era location, cross-referenced from timer4.js's own guildDetail() popup
+-- text and https://ffxiclopedia.fandom.com/wiki/Guild_Merchant (hours/holidays on that wiki are
+-- outdated for this server and were not used -- only the zone/coordinates were).
+vanadiel.GUILDS = T{
+    { key = 'alchemy',    name = 'Alchemy',     title = 'Alchemist\'s Guild',    open_hour = 8, close_hour = 23, holiday = 6, zone = 'Bastok Mines',           coords = 'K-7',  npc = 'Odoba' },
+    { key = 'blacksmith', name = 'Blacksmith',  title = 'Blacksmith\'s Guild',   open_hour = 8, close_hour = 23, holiday = 2, zone = 'Northern San d\'Oria',   coords = 'E-6',  npc = 'Doggomehr' },
+    { key = 'bonecraft',  name = 'Bonecraft',   title = 'Boneworker\'s Guild',   open_hour = 8, close_hour = 23, holiday = 3, zone = 'Windurst Woods',         coords = 'H-13', npc = 'Shih Tayuun' },
+    { key = 'goldsmith',  name = 'Goldsmith',   title = 'Goldsmith\'s Guild',    open_hour = 8, close_hour = 23, holiday = 4, zone = 'Bastok Markets',         coords = 'H-8',  npc = 'Teerth' },
+    { key = 'clothcraft', name = 'Clothcraft',  title = 'Weaver\'s Guild',       open_hour = 6, close_hour = 21, holiday = 0, zone = 'Windurst Woods',         coords = 'F-12', npc = 'Kuzah Hpirohpon' },
+    { key = 'woodworking',name = 'Woodworking', title = 'Carpenter\'s Guild',    open_hour = 6, close_hour = 21, holiday = 0, zone = 'Northern San d\'Oria',   coords = 'F-3',  npc = 'Cauzeriste' },
+    { key = 'leathercraft',name = 'Leathercraft',title = 'Leatherworker\'s Guild',open_hour = 3, close_hour = 18, holiday = 4, zone = 'Southern San d\'Oria',  coords = 'E-8',  npc = 'Cletae' },
+    { key = 'fishing',    name = 'Fishing',     title = 'Fisherman\'s Guild',    open_hour = 3, close_hour = 18, holiday = 5, zone = 'Port Windurst',          coords = 'C-8',  npc = 'Babubu' },
+    { key = 'cooking',    name = 'Cooking',     title = 'Culinary Guild',        open_hour = 5, close_hour = 20, holiday = 7, zone = 'Windurst Waters',        coords = 'E-8',  npc = 'Chomo Jinjahl' },
+};
+
+-- Airship routes, each a named leg plus which of the 5 distinct schedule offsets (straight from
+-- timer4.js's getAirSched()) it runs on. Each route cycles every 6 Vana'diel hours (4x/day).
+local AIRSHIP_OFFSETS = {
+    o1 = 168, -- 1:10 (Vana'diel h:mm) -- Bastok<->Jeuno, San d'Oria->Jeuno
+    o2 = 384, -- 2:40 -- Windurst<->Jeuno (outbound), Kazham->Jeuno
+    o3 = 600, -- 4:10 -- Jeuno->Bastok, San d'Oria->Jeuno... (see routes below)
+    o4 = 804, -- 5:35 -- Jeuno->Kazham
+    o5 = 828, -- 5:45 -- Windurst->Jeuno
+};
+vanadiel.AIRSHIP_ROUTES = T{
+    { name = 'Jeuno -> Bastok',        offset = 'o3' },
+    { name = 'Jeuno -> Kazham',        offset = 'o4' },
+    { name = 'Jeuno -> San d\'Oria',   offset = 'o1' },
+    { name = 'Jeuno -> Windurst',      offset = 'o2' },
+    { name = 'Bastok -> Jeuno',        offset = 'o1' },
+    { name = 'Kazham -> Jeuno',        offset = 'o2' },
+    { name = 'San d\'Oria -> Jeuno',   offset = 'o3' },
+    { name = 'Windurst -> Jeuno',      offset = 'o5' },
+};
+
+-- Selbina<->Mhaura ferry: departs every 1/3 Vana'diel day, arrives 90 Vana'diel minutes later.
+local FERRY_DEPART_LABELS = T{ '08:00', '16:00', '00:00' };
+local FERRY_ARRIVE_LABELS = T{ '06:30', '14:30', '22:30' };
+local FERRY_DAY_OFFSET    = T{ 0, 0, 7 };
+
 --[[
 * Converts a table of UTC date/time fields into Unix epoch seconds, without assuming the
 * host's local timezone. Lua's os.time(table) interprets the table as local time, so we
@@ -71,6 +113,8 @@ end
 local function timegm(t)
     return os.time(t) + utc_offset();
 end
+vanadiel.timegm = timegm; -- exposed for real-world (not Vana'diel) UTC-based schedules, e.g. the
+                          -- Guild Point daily turn-in reset in core/world.lua.
 
 -- Basis timestamps, matching timer4.js exactly (basisDate / Mndate / RSEdate).
 local BASIS_EPOCH = timegm({ year = 2002, month = 6, day = 23, hour = 15, min = 0,  sec = 0,  isdst = false });
@@ -175,6 +219,9 @@ function vanadiel.moon_phase()
     return T{
         name            = vanadiel.PHASE_NAMES[phase + 1],
         percent         = percent,
+        -- Phases 4-7 (New Moon through Waxing Gibbous) are waxing (growing toward Full);
+        -- 0-3 (Full Moon through Waning Crescent) are waning (shrinking toward New).
+        waxing          = (phase >= 4),
         next_name       = vanadiel.PHASE_NAMES[((phase + 1) % 8) + 1],
         next_in_seconds = next_in,
     };
@@ -367,6 +414,170 @@ function vanadiel.rse_schedule_all(count)
             race_name      = vanadiel.RSE_RACES[race_index + 1],
             location       = vanadiel.RSE_LOCATIONS[location_index + 1],
             location_index = location_index + 1,
+        });
+    end
+
+    return list;
+end
+
+--[[
+* Computes live open/closed/holiday status for one guild, ported from timer4.js's
+* guildHelper(). Uses the same basis/vana-day math as vanadiel.now()/day_schedule().
+*
+* @param {table} guild - One row from vanadiel.GUILDS.
+* @return {table} { status ('open'|'closed'|'holiday'), next_label ('opens'|'closes'),
+*   countdown_seconds, holiday_name }
+--]]
+function vanadiel.guild_status(guild)
+    local now = os.time();
+    local vana = ((898 * 360 + 30) * SEC_REAL_DAY) + (now - BASIS_EPOCH) * 25;
+    local elapsed_in_day = (vana % SEC_REAL_DAY) / 25;
+    local day_start = now - elapsed_in_day;
+    local vday = math.floor((vana % (8 * SEC_REAL_DAY)) / SEC_REAL_DAY);
+
+    local conv = 3600 / 25; -- real seconds per Vana'diel hour
+    local open_offset = guild.open_hour * conv;
+    local open_time = day_start + open_offset;
+    local close_time = day_start + (guild.close_hour * conv);
+
+    local status, next_label, countdown;
+    if (open_time >= now) then
+        status, next_label, countdown = 'closed', 'opens', open_time - now;
+    elseif (open_time < now and close_time > now) then
+        status, next_label, countdown = 'open', 'closes', close_time - now;
+    else
+        status, next_label, countdown = 'closed', 'opens', (SEC_GAME_DAY - elapsed_in_day) + open_offset;
+    end
+
+    -- Holiday overrides: closed all day on its holiday weekday, and (fixing a non-wrapping
+    -- bug in the source script) also accounts for a holiday landing on the day after Darksday.
+    if (guild.holiday == vday and close_time > now) then
+        status, next_label, countdown = 'holiday', 'opens', (SEC_GAME_DAY - elapsed_in_day) + open_offset;
+    elseif (((vday + 1) % 8) == guild.holiday and close_time <= now) then
+        status, next_label, countdown = 'holiday', 'opens', (SEC_GAME_DAY - elapsed_in_day) + open_offset + SEC_GAME_DAY;
+    end
+
+    return T{
+        status            = status,
+        next_label        = next_label,
+        countdown_seconds = countdown,
+        holiday_weekday   = guild.holiday,
+        holiday_name      = vanadiel.VANA_DAYS[guild.holiday + 1],
+    };
+end
+
+--[[
+* Builds the live status for every crafting guild.
+*
+* @return {table} Array of { key, name, title, zone, coords, npc, open_hour, close_hour,
+*   holiday_name, status, next_label, countdown_seconds }
+--]]
+function vanadiel.guild_schedule()
+    local list = T{ };
+    for x = 1, #vanadiel.GUILDS do
+        local guild = vanadiel.GUILDS[x];
+        local live = vanadiel.guild_status(guild);
+        list:insert(#list + 1, T{
+            key               = guild.key,
+            name              = guild.name,
+            title             = guild.title,
+            zone              = guild.zone,
+            coords            = guild.coords,
+            npc               = guild.npc,
+            open_hour         = guild.open_hour,
+            close_hour        = guild.close_hour,
+            status            = live.status,
+            next_label        = live.next_label,
+            countdown_seconds = live.countdown_seconds,
+            holiday_weekday   = live.holiday_weekday,
+            holiday_name      = live.holiday_name,
+        });
+    end
+    return list;
+end
+
+--[[
+* Builds the next-departure row for every airship route, ported from timer4.js's
+* getAirSched()/AirHelper().
+*
+* @return {table} Array of { name, weekday, day_name, color, arrives_in, departs_in }
+--]]
+function vanadiel.airship_schedule()
+    local now = os.time();
+    local vana = ((898 * 360 + 30) * SEC_REAL_DAY) + (now - BASIS_EPOCH) * 25;
+    local elapsed = (vana % SEC_REAL_DAY) / 25;
+    local vday = math.floor((vana % (8 * SEC_REAL_DAY)) / SEC_REAL_DAY);
+    local quarter = SEC_GAME_DAY / 4;
+
+    local list = T{ };
+    for x = 1, #vanadiel.AIRSHIP_ROUTES do
+        local route = vanadiel.AIRSHIP_ROUTES[x];
+        local offset = AIRSHIP_OFFSETS[route.offset];
+
+        local new_offset = offset;
+        local count = 0;
+        while (new_offset < elapsed) do
+            count = count + 1;
+            new_offset = new_offset + quarter;
+        end
+
+        local day = vday;
+        if (count >= 4) then
+            day = (day + 1) % 8;
+        end
+
+        local departs_in = new_offset - elapsed;
+        local arrives_in = math.max(0, departs_in - 144); -- 144s = 1 Vana'diel hour boarding window
+
+        list:insert(#list + 1, T{
+            name       = route.name,
+            weekday    = day,
+            day_name   = vanadiel.VANA_DAYS[day + 1],
+            color      = vanadiel.DAY_COLORS[day + 1],
+            arrives_in = arrives_in,
+            departs_in = departs_in,
+        });
+    end
+
+    return list;
+end
+
+--[[
+* Builds the upcoming Selbina<->Mhaura ferry schedule, ported from timer4.js's getShipSched().
+*
+* @param {number} count - How many upcoming departures to list.
+* @return {table} Array of { arrive_weekday, arrive_day, arrive_color, arrive_label, arrives_in,
+*   depart_weekday, depart_day, depart_color, depart_label, departs_in }
+--]]
+function vanadiel.ferry_schedule(count)
+    local now = os.time();
+    local elapsed = now - BASIS_EPOCH;
+    local third = SEC_GAME_DAY / 3;
+
+    local hours = math.floor(elapsed / third) % 3;
+    local time_left = third - (elapsed % third);
+
+    local vana = ((898 * 360 + 30) * SEC_REAL_DAY) + elapsed * 25;
+    local vday = math.floor((vana % (8 * SEC_REAL_DAY)) / SEC_REAL_DAY);
+
+    local list = T{ };
+    for i = 0, (count - 1) do
+        local time_left_loop = time_left + (i * third);
+        local idx = (hours + i) % 3;
+        local depart_day = (vday + math.floor((hours + 1 + i) / 3)) % 8;
+        local arrive_day = (depart_day + FERRY_DAY_OFFSET[idx + 1]) % 8;
+
+        list:insert(#list + 1, T{
+            arrive_weekday = arrive_day,
+            arrive_day     = vanadiel.VANA_DAYS[arrive_day + 1],
+            arrive_color   = vanadiel.DAY_COLORS[arrive_day + 1],
+            arrive_label   = FERRY_ARRIVE_LABELS[idx + 1],
+            arrives_in     = math.max(0, time_left_loop - 216),
+            depart_weekday = depart_day,
+            depart_day     = vanadiel.VANA_DAYS[depart_day + 1],
+            depart_color   = vanadiel.DAY_COLORS[depart_day + 1],
+            depart_label   = FERRY_DEPART_LABELS[idx + 1],
+            departs_in     = time_left_loop,
         });
     end
 
