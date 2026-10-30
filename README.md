@@ -1,6 +1,7 @@
 # VanaLog
 
-Never miss what matters in Vana'diel. VanaLog automatically tracks **RSE**
+Never miss what matters in Vana'diel. VanaLog is an Ashita v4 addon that
+automatically tracks **RSE**
 windows, **airship and ferry** departures, **crafting guild** shop hours, the
 day/moon calendar, and your own custom timers and notes -- then fires custom
 **alerts** to keep you notified of exactly the events you care about, down to
@@ -47,7 +48,7 @@ see [Credits](#credits) below.
 </tr>
 <tr>
 <td><img src="screenshots/overlay-timers-reminders.png" width="300" alt="Overlay Timers & Reminders tab"><br><sub>Timers & Reminders</sub></td>
-<td></td>
+<td><img src="screenshots/overlay-low-profile.webp" width="300" alt="Overlay in Low Profile Mode"><br><sub>Low Profile Mode -- no background/border, just text and icons</sub></td>
 </tr>
 </table>
 
