@@ -17,12 +17,16 @@ see [Credits](#credits) below.
 
 <table>
 <tr>
-<td><img src="screenshots/settings-appearance.png" width="420" alt="Appearance tab"><br><sub>Appearance -- theme presets, colors, alerts</sub></td>
-<td><img src="screenshots/settings-timers-notes.png" width="420" alt="Timers & Notes tab"><br><sub>Timers & Notes -- add/edit entries</sub></td>
+<td><img src="screenshots/settings-appearance.png" width="420" alt="Appearance tab"><br><sub>Appearance -- theme presets, colors, Low Profile Mode, Window Scale</sub></td>
+<td><img src="screenshots/settings-timers-notes.png" width="420" alt="Timers & Notes tab"><br><sub>Timers & Notes -- add/edit entries, category colors</sub></td>
 </tr>
 <tr>
-<td><img src="screenshots/settings-world-info.webp" width="420" alt="World Info tab"><br><sub>World Info -- clock, moon phase, RSE, day calendar</sub></td>
-<td><img src="screenshots/settings-reminders.webp" width="420" alt="Reminders tab"><br><sub>Reminders -- RSE, Day Change, Moon Phase alerts</sub></td>
+<td><img src="screenshots/settings-journal.png" width="420" alt="Journal tab"><br><sub>Journal -- dated log of notes added/completed, by week</sub></td>
+<td><img src="screenshots/settings-world-info.png" width="420" alt="World Info tab"><br><sub>World Info -- RSE, day/moon calendar</sub></td>
+</tr>
+<tr>
+<td><img src="screenshots/settings-world-info-guilds.webp" width="420" alt="World Info tab, Guilds and Airships"><br><sub>World Info -- crafting guild hours, airship/ferry schedules (individually followable)</sub></td>
+<td><img src="screenshots/settings-reminders.png" width="420" alt="Reminders tab"><br><sub>Reminders -- RSE, Day Change, Moon Phase, Guild Points, Fishing</sub></td>
 </tr>
 <tr>
 <td><img src="screenshots/settings-about.png" width="420" alt="About tab"><br><sub>About -- credits</sub></td>
@@ -34,12 +38,12 @@ see [Credits](#credits) below.
 
 <table>
 <tr>
-<td><img src="screenshots/overlay-timers.png" width="300" alt="Overlay Timers tab"><br><sub>Timers</sub></td>
+<td><img src="screenshots/overlay-world.png" width="300" alt="Overlay World tab"><br><sub>World -- only what you've chosen to Follow</sub></td>
 <td><img src="screenshots/overlay-notes.png" width="300" alt="Overlay Notes tab"><br><sub>Notes</sub></td>
 </tr>
 <tr>
-<td><img src="screenshots/overlay-world.png" width="300" alt="Overlay World tab"><br><sub>World</sub></td>
-<td><img src="screenshots/overlay-reminders.png" width="300" alt="Overlay Reminders tab"><br><sub>Reminders</sub></td>
+<td><img src="screenshots/overlay-timers-reminders.png" width="300" alt="Overlay Timers & Reminders tab"><br><sub>Timers & Reminders</sub></td>
+<td></td>
 </tr>
 </table>
 
